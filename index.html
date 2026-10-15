@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHT - Liên kết ion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Roboto', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5', // Indigo 600
+                        secondary: '#7C3AED', // Violet 600
+                        success: '#10B981', // Emerald 500
+                        danger: '#EF4444', // Red 500
+                        warning: '#F59E0B', // Amber 500
+                        info: '#3B82F6', // Blue 500
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .glass-header {
+            background: linear-gradient(135deg, #3B82F6, #4F46E5, #7C3AED);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            padding: 1rem 1.5rem;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Multiple Choice Custom Radio */
+        .mc-option {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mc-option:hover {
+            background-color: #f8fafc;
+        }
+        .mc-option input:checked + div {
+            border-color: #4F46E5;
+            background-color: #EEF2FF;
+        }
+        
+        /* Dropdown styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1em;
+            padding-right: 2.5rem !important;
+        }
+
+        /* Matching Colors */
+        .match-color-1 { border-color: #ef4444; background-color: #fef2f2; color: #991b1b; }
+        .match-color-2 { border-color: #f59e0b; background-color: #fffbeb; color: #92400e; }
+        .match-color-3 { border-color: #10b981; background-color: #ecfdf5; color: #065f46; }
+        .match-color-4 { border-color: #3b82f6; background-color: #eff6ff; color: #1e40af; }
+        .match-color-5 { border-color: #8b5cf6; background-color: #f5f3ff; color: #5b21b6; }
+        .match-color-6 { border-color: #ec4899; background-color: #fdf2f8; color: #9d174d; }
+
+        .match-btn {
+            transition: all 0.2s;
+            border: 2px solid #e5e7eb;
+        }
+        .match-btn:not(.matched):hover {
+            border-color: #9ca3af;
+            background-color: #f3f4f6;
+        }
+        .match-btn.selected {
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+            transform: scale(1.02);
+        }
+        
+        /* Drag and Drop */
+        .draggable-item {
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+        .draggable-item.dragging {
+            opacity: 0.5;
+        }
+        .draggable-item.selected-for-drop {
+            border: 2px solid #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+            transform: scale(1.05);
+        }
+        .drop-zone {
+            min-height: 3rem;
+            border: 2px dashed #cbd5e1;
+            transition: all 0.2s;
+        }
+        .drop-zone.drag-over {
+            border-color: #4F46E5;
+            background-color: #EEF2FF;
+        }
+        .drop-zone.has-item {
+            border-style: solid;
+            border-color: transparent;
+        }
+
+        /* Animations */
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        /* Result Overlays */
+        .result-icon {
+            display: none;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+        }
+        .correct-ans .result-icon.fa-check-circle { display: block; color: #10B981; }
+        .wrong-ans .result-icon.fa-times-circle { display: block; color: #EF4444; }
+        
+        /* Modal */
+        #admin-modal {
+            backdrop-filter: blur(4px);
+        }
+
+        /* Print styles */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+            .glass-header { background: none; color: black; border-bottom: 2px solid black; }
+            .section-header { background: #eee !important; color: black; }
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased pb-20">
+
+    <!-- Admin Button -->
+    <button onclick="openAdminLogin()" class="fixed top-4 right-4 z-50 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur transition-all no-print shadow-lg border border-white/30 group">
+        <i class="fas fa-cog text-xl group-hover:rotate-90 transition-transform duration-300"></i>
+    </button>
+
+    <!-- Header Section -->
+    <header class="glass-header text-white pb-12 pt-8 px-4 text-center rounded-b-3xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNmZmYiLz48L3N2Zz4=')]"></div>
+        <div class="max-w-3xl mx-auto relative z-10">
+            <h2 class="text-sm uppercase tracking-widest font-semibold mb-2 opacity-80" id="ui-subject">Môn: Hóa học - Khối 10</h2>
+            <h1 class="text-3xl md:text-5xl font-bold mb-6 drop-shadow-md" id="ui-title">PHIẾU HỌC TẬP: LIÊN KẾT ION</h1>
+            
+            <div class="bg-white/10 backdrop-blur-md p-4 md:p-6 rounded-2xl border border-white/20 flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
+                <div class="flex-1 text-left">
+                    <label class="block text-xs font-medium opacity-80 mb-1 ml-2">Họ và tên học sinh</label>
+                    <input type="text" id="student-name" placeholder="Nhập tên của em..." class="w-full bg-white/20 border-0 border-b-2 border-white/30 focus:border-white focus:ring-0 text-white placeholder-white/50 px-3 py-2 rounded-t transition-colors outline-none text-lg">
+                </div>
+                <div class="w-full md:w-1/3 text-left">
+                    <label class="block text-xs font-medium opacity-80 mb-1 ml-2">Lớp</label>
+                    <input type="text" id="student-class" placeholder="10A..." class="w-full bg-white/20 border-0 border-b-2 border-white/30 focus:border-white focus:ring-0 text-white placeholder-white/50 px-3 py-2 rounded-t transition-colors outline-none text-lg">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl mx-auto -mt-6 px-4 relative z-20 space-y-6" id="worksheet-container">
+        
+        <!-- Instructions Card -->
+        <div class="card animate-pop bg-yellow-50 border-l-4 border-warning no-print">
+            <div class="p-4 md:p-5 text-yellow-900">
+                <h3 class="font-bold flex items-center gap-2 mb-2"><i class="fas fa-bullhorn text-warning"></i> Hướng dẫn làm bài</h3>
+                <ul class="list-disc list-inside space-y-1 text-sm md:text-base opacity-90">
+                    <li>Đọc kỹ từng câu hỏi và chọn đáp án chính xác nhất.</li>
+                    <li>Thao tác trực tiếp trên phiếu: chọn, điền, nối hoặc kéo thả.</li>
+                    <li>Sau khi hoàn thành, bấm nút <strong>"Nộp bài & Chấm điểm"</strong> ở cuối trang.</li>
+                    <li>Tổng điểm bài làm là <strong id="ui-total-points">10</strong> điểm.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Dynamic Sections will be injected here -->
+        <div id="dynamic-sections"></div>
+
+        <!-- Submission Area -->
+        <div class="text-center mt-12 mb-8 no-print">
+            <button id="btn-submit" onclick="gradeWorksheet()" class="bg-gradient-to-r from-success to-emerald-400 hover:from-emerald-500 hover:to-success text-white font-bold py-4 px-12 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 text-lg flex items-center gap-3 mx-auto">
+                <i class="fas fa-paper-plane"></i> NỘP BÀI & CHẤM ĐIỂM
+            </button>
+            <div id="result-display" class="hidden mt-8 animate-pop">
+                <div class="inline-block bg-white border-4 border-primary rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+                    <h3 class="text-xl font-bold text-gray-600 mb-2 uppercase tracking-wide">Điểm của em</h3>
+                    <div class="text-6xl font-black text-primary mb-2">
+                        <span id="final-score" class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">0.00</span> 
+                        <span class="text-2xl text-gray-400">/ <span id="max-score-display">10</span></span>
+                    </div>
+                    <p id="feedback-msg" class="text-gray-500 font-medium"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ghi nhớ Card -->
+        <div id="summary-card" class="hidden card bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 animate-pop">
+            <div class="p-6 md:p-8">
+                <h3 class="text-xl font-bold text-indigo-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-lightbulb text-yellow-500 text-2xl"></i> GHI NHỚ SIÊU NHANH
+                </h3>
+                <ul class="space-y-3 text-indigo-900 font-medium list-none">
+                    <li class="flex items-start gap-3">
+                        <i class="fas fa-check text-success mt-1"></i>
+                        <span>Nguyên tử nhường/nhận electron để đạt cấu hình bền vững của <strong>khí hiếm</strong>.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="fas fa-check text-success mt-1"></i>
+                        <span>Liên kết ion hình thành do lực <strong>hút tĩnh điện</strong> giữa cation và anion.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="fas fa-check text-success mt-1"></i>
+                        <span>Thường hình thành giữa <strong>kim loại điển hình</strong> và <strong>phi kim điển hình</strong>.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="fas fa-check text-success mt-1"></i>
+                        <span>Hợp chất ion: thể rắn, nhiệt độ nóng chảy <strong>cao</strong>, tan trong nước tạo dung dịch <strong>dẫn điện</strong>.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-pop">
+            <h3 class="text-xl font-bold mb-4 text-center">Quản trị Giáo viên</h3>
+            <p class="text-sm text-gray-500 mb-4 text-center">Vui lòng nhập mật khẩu để tiếp tục.</p>
+            <input type="password" id="admin-password" placeholder="Mật khẩu..." class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-primary focus:outline-none mb-4 text-center text-xl tracking-widest">
+            <div class="flex gap-3">
+                <button onclick="closeAdminLogin()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg font-medium transition-colors">Hủy</button>
+                <button onclick="verifyAdminPassword()" class="flex-1 bg-primary hover:bg-indigo-700 text-white py-2 rounded-lg font-medium transition-colors">Xác nhận</button>
+            </div>
+            <p id="admin-login-error" class="text-danger text-sm mt-2 text-center hidden">Sai mật khẩu!</p>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard Modal -->
+    <div id="admin-dashboard" class="hidden fixed inset-0 bg-black/60 z-[60] overflow-y-auto">
+        <div class="min-h-screen px-4 text-center flex items-center justify-center">
+            <div class="bg-gray-50 rounded-2xl w-full max-w-4xl text-left shadow-2xl overflow-hidden my-8 animate-pop">
+                <!-- Dashboard Header -->
+                <div class="bg-slate-800 text-white px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-cogs"></i> Cấu hình Phiếu Học Tập</h2>
+                    <button onclick="closeAdminDashboard()" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- Dashboard Body -->
+                <div class="p-6 max-h-[70vh] overflow-y-auto">
+                    <!-- General Settings -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
+                        <h3 class="font-bold text-lg border-b pb-2 mb-4 text-slate-700">Thông tin chung</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tên bài học</label>
+                                <input type="text" id="cfg-title" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Môn học</label>
+                                    <input type="text" id="cfg-subject" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Khối lớp</label>
+                                    <input type="text" id="cfg-grade" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tổng điểm toàn phiếu</label>
+                                <input type="number" id="cfg-total-score" step="0.5" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none font-bold text-primary">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sections Config -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
+                        <div class="flex justify-between items-end border-b pb-2 mb-4">
+                            <h3 class="font-bold text-lg text-slate-700">Cấu hình các phần (Sections)</h3>
+                            <div class="text-sm font-medium">Tổng điểm phân bổ: <span id="cfg-allocated-score" class="font-bold text-lg">0</span></div>
+                        </div>
+                        
+                        <div class="space-y-4" id="admin-sections-list">
+                            <!-- Injected dynamically -->
+                        </div>
+                        <p id="score-warning" class="text-danger text-sm font-medium mt-3 hidden flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> Tổng điểm phân bổ không khớp với Tổng điểm toàn phiếu!</p>
+                    </div>
+
+                    <!-- Media Upload (Kéo thả) -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-lg border-b pb-2 mb-4 text-slate-700">Tùy chỉnh ảnh Kéo thả (Tùy chọn)</h3>
+                        <p class="text-sm text-gray-500 mb-4">Mặc định hệ thống dùng text. Nếu muốn dùng ảnh, hãy tải lên tại đây. Ảnh sẽ được chuyển thành Base64 để lưu vào file.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="admin-media-list">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Footer -->
+                <div class="bg-gray-100 px-6 py-4 flex justify-end gap-3 border-t">
+                    <button onclick="closeAdminDashboard()" class="px-5 py-2 rounded-lg font-medium text-gray-600 bg-white border hover:bg-gray-50 transition-colors">Đóng</button>
+                    <button onclick="saveAdminConfig()" class="px-5 py-2 rounded-lg font-medium text-white bg-primary hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                        <i class="fas fa-save"></i> Lưu Cấu Hình
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. DATA STRUCTURE ---
+        // THẦY CÔ DÁN URL WEB APP CỦA GOOGLE SCRIPT VÀO ĐÂY SAU KHI TRIỂN KHAI
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2RNAM4fAc7S81y_x7Vc6saME06a4o1Z1dxIXu2hWYJfTzwiiLIIErnmt9LxYiwXhX0Q/exec";
+
+        let appData = {
+            config: {
+                title: "Liên kết ion",
+                subject: "Hóa học",
+                grade: "10",
+                totalScore: 10,
+                // We map section keys to readable names, colors, etc.
+                sections: {
+                    mc: { id: 'mc', title: "I. TRẮC NGHIỆM NHANH", active: true, points: 2, qCount: 4, type: 'mc', color: 'blue' },
+                    fill: { id: 'fill', title: "II. ĐIỀN KHUYẾT", active: true, points: 2, qCount: 4, type: 'fill', color: 'purple' },
+                    tf: { id: 'tf', title: "III. ĐÚNG/SAI", active: true, points: 2, qCount: 4, type: 'tf', color: 'teal' },
+                    match: { id: 'match', title: "IV. NỐI CỘT", active: true, points: 2, qCount: 4, type: 'match', color: 'orange' },
+                    dnd: { id: 'dnd', title: "V. KÉO THẢ DỮ LIỆU", active: true, points: 2, qCount: 4, type: 'dnd', color: 'rose' }
+                }
+            },
+            content: {
+                mc: [
+                    { q: "Biểu diễn sự tạo thành ion nào sau đây đúng?", options: ["Na + 1e → Na+", "Cl → Cl- + 1e", "Cl2 → 2Cl- + 2e", "Na → Na+ + 1e"], ans: 3 }, // index 3 = D
+                    { q: "Liên kết ion là loại liên kết hoá học được hình thành nhờ lực hút tĩnh điện giữa các phần tử nào sau đây?", options: ["Cation và anion", "Các anion", "Cation và các electron tự do", "Electron và hạt nhân nguyên tử"], ans: 0 },
+                    { q: "Liên kết ion thường tạo thành giữa hai nguyên tử", options: ["kim loại điển hình", "phi kim điển hình", "kim loại và phi kim", "kim loại điển hình và phi kim điển hình"], ans: 3 },
+                    { q: "Đặc điểm nào sau đây không phải của hợp chất ion?", options: ["Nhiệt độ nóng chảy thấp", "Thường là chất rắn ở điều kiện thường", "Tan nhiều trong nước", "Dung dịch dẫn được điện"], ans: 0 }
+                ],
+                fill: [
+                    { textPre: "Các nguyên tử có xu hướng nhường, nhận hoặc dùng chung electron để đạt cấu hình bền vững của ", textPost: ".", options: ["Kim loại", "Phi kim", "Halogen", "Khí hiếm"], ans: "Khí hiếm" },
+                    { textPre: "Trong tinh thể NaCl, ion Na+ và ion Cl- hút nhau bằng lực hút ", textPost: ".", options: ["Cộng hóa trị", "Từ trường", "Tĩnh điện", "Hấp dẫn"], ans: "Tĩnh điện" },
+                    { textPre: "Các hợp chất ion thường tồn tại ở trạng thái ", textPost: " trong điều kiện thường.", options: ["Rắn", "Lỏng", "Khí", "Vô định hình"], ans: "Rắn" },
+                    { textPre: "Tinh thể ion rất bền vững nên chúng có nhiệt độ nóng chảy ", textPost: ".", options: ["Thấp", "Trung bình", "Rất thấp", "Cao"], ans: "Cao" }
+                ],
+                tf: [
+                    { q: "Liên kết ion được tạo thành do sự dùng chung electron.", ans: false },
+                    { q: "Ở điều kiện thường, các hợp chất ion là chất khí.", ans: false },
+                    { q: "Trong tinh thể sodium chloride, xung quanh 1 ion Na+ có 6 ion Cl- gần nhất.", ans: true },
+                    { q: "Các hợp chất ion thường tan nhiều trong nước và tạo dung dịch dẫn được điện.", ans: true }
+                ],
+                match: [
+                    { a: "Cation", b: "Ion mang điện tích dương", id: 1 },
+                    { a: "Anion", b: "Ion mang điện tích âm", id: 2 },
+                    { a: "Ion Ca²⁺", b: "Có 18 electron", id: 3 },
+                    { a: "Ion O²⁻", b: "Có 10 electron", id: 4 }
+                ],
+                dnd: [
+                    { target: "Cấu hình electron của Na⁺", sourceText: "1s²2s²2p⁶", sourceImg: null, id: "dnd1" },
+                    { target: "Cấu hình electron của Cl⁻", sourceText: "1s²2s²2p⁶3s²3p⁶", sourceImg: null, id: "dnd2" },
+                    { target: "Cation", sourceText: "Ca²⁺, Mg²⁺, NH₄⁺", sourceImg: null, id: "dnd3" },
+                    { target: "Anion", sourceText: "Cl⁻, O²⁻, CO₃²⁻", sourceImg: null, id: "dnd4" }
+                ]
+            }
+        };
+
+        // State to hold user answers
+        let userState = {
+            mc: {},
+            fill: {},
+            tf: {},
+            match: {}, // { a_index: b_index }
+            dnd: {} // { dropZoneId: sourceId }
+        };
+
+        let isSubmitted = false;
+        
+        // Match section temporary state
+        let matchState = {
+            selectedA: null, // index of selected Col A item
+            connections: {} // map of colA_index -> colB_index
+        };
+
+        // Drag and Drop global state (for touch/click fallback)
+        let dndState = {
+            selectedItemId: null
+        };
+
+        const colorMap = {
+            'blue': { bg: 'bg-blue-500', text: 'text-blue-500', light: 'bg-blue-50', border: 'border-blue-200' },
+            'purple': { bg: 'bg-purple-500', text: 'text-purple-500', light: 'bg-purple-50', border: 'border-purple-200' },
+            'teal': { bg: 'bg-teal-500', text: 'text-teal-500', light: 'bg-teal-50', border: 'border-teal-200' },
+            'orange': { bg: 'bg-orange-500', text: 'text-orange-500', light: 'bg-orange-50', border: 'border-orange-200' },
+            'rose': { bg: 'bg-rose-500', text: 'text-rose-500', light: 'bg-rose-50', border: 'border-rose-200' }
+        };
+
+        // --- 2. INITIALIZATION & RENDERING ---
+        function initApp() {
+            // Load config from localStorage if exists to persist admin changes (optional but good)
+            const savedData = localStorage.getItem('pht_lienketion_data');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    appData.config = parsed.config;
+                    // For content, only override images in DnD if they exist
+                    if(parsed.content && parsed.content.dnd) {
+                        parsed.content.dnd.forEach((item, idx) => {
+                            if(item.sourceImg) appData.content.dnd[idx].sourceImg = item.sourceImg;
+                        });
+                    }
+                } catch(e) {}
+            }
+
+            updateHeaderUI();
+            renderSections();
+            setupDragAndDropGlobal();
+        }
+
+        function updateHeaderUI() {
+            document.getElementById('ui-title').textContent = appData.config.title;
+            document.getElementById('ui-subject').textContent = `Môn: ${appData.config.subject} - Khối ${appData.config.grade}`;
+            document.getElementById('ui-total-points').textContent = appData.config.totalScore;
+        }
+
+        function renderSections() {
+            const container = document.getElementById('dynamic-sections');
+            container.innerHTML = ''; // Clear
+
+            // Order of sections
+            const order = ['mc', 'fill', 'tf', 'match', 'dnd'];
+            
+            order.forEach(key => {
+                const sectionCfg = appData.config.sections[key];
+                if (sectionCfg && sectionCfg.active) {
+                    const sectionHtml = buildSectionHtml(key, sectionCfg);
+                    container.insertAdjacentHTML('beforeend', sectionHtml);
+                }
+            });
+
+            // Post-render attachments
+            if(appData.config.sections.dnd.active) {
+                attachDragAndDropEvents();
+            }
+        }
+
+        function buildSectionHtml(key, cfg) {
+            const colors = colorMap[cfg.color];
+            let contentHtml = '';
+
+            switch (key) {
+                case 'mc': contentHtml = buildMC(); break;
+                case 'fill': contentHtml = buildFill(); break;
+                case 'tf': contentHtml = buildTF(); break;
+                case 'match': contentHtml = buildMatch(); break;
+                case 'dnd': contentHtml = buildDnD(); break;
+            }
+
+            return `
+                <div class="card" id="section-${key}">
+                    <div class="section-header ${colors.bg}">
+                        <i class="fas ${getIconForSection(key)}"></i>
+                        <span>${cfg.title}</span>
+                    </div>
+                    <div class="p-4 md:p-6 space-y-6 ${colors.light}">
+                        ${contentHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getIconForSection(key) {
+            const map = { 'mc': 'fa-list-ul', 'fill': 'fa-pen', 'tf': 'fa-check-circle', 'match': 'fa-project-diagram', 'dnd': 'fa-hand-pointer' };
+            return map[key] || 'fa-star';
+        }
+
+        // --- SECTION BUILDERS ---
+        function buildMC() {
+            const data = appData.content.mc;
+            let html = '';
+            const labels = ['A', 'B', 'C', 'D'];
+            data.forEach((item, qIdx) => {
+                html += `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative group" id="mc-q-${qIdx}">
+                    <p class="font-medium text-gray-800 mb-3"><span class="font-bold mr-1">Câu ${qIdx + 1}:</span> ${item.q}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+                
+                item.options.forEach((opt, oIdx) => {
+                    html += `
+                        <label class="mc-option flex items-center relative">
+                            <input type="radio" name="mc_${qIdx}" value="${oIdx}" class="peer sr-only" onchange="userState.mc[${qIdx}] = ${oIdx}">
+                            <div class="w-full border-2 border-gray-200 rounded-lg p-3 peer-checked:border-primary peer-checked:bg-indigo-50 transition flex gap-3 items-center">
+                                <span class="w-6 h-6 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-bold peer-checked:bg-primary peer-checked:text-white shrink-0">${labels[oIdx]}</span>
+                                <span class="text-gray-700">${opt}</span>
+                            </div>
+                        </label>
+                    `;
+                });
+                
+                html += `</div><i class="fas result-icon"></i></div>`;
+            });
+            return html;
+        }
+
+        function buildFill() {
+            const data = appData.content.fill;
+            let html = '<div class="space-y-4">';
+            data.forEach((item, qIdx) => {
+                let optionsHtml = `<option value="" disabled selected>-- Chọn đáp án --</option>`;
+                item.options.forEach(opt => {
+                    optionsHtml += `<option value="${opt}">${opt}</option>`;
+                });
+
+                html += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative text-gray-800 leading-loose" id="fill-q-${qIdx}">
+                        <span class="font-bold mr-2 text-purple-600">${qIdx + 1}.</span>
+                        ${item.textPre}
+                        <select class="border-b-2 border-purple-300 focus:border-purple-600 bg-purple-50 rounded px-2 py-1 mx-1 font-semibold text-purple-800 outline-none w-48 inline-block transition-colors" 
+                                onchange="userState.fill[${qIdx}] = this.value">
+                            ${optionsHtml}
+                        </select>
+                        ${item.textPost}
+                        <i class="fas result-icon"></i>
+                    </div>
+                `;
+            });
+            return html + '</div>';
+        }
+
+        function buildTF() {
+            const data = appData.content.tf;
+            let html = '<div class="overflow-x-auto"><table class="w-full text-left border-collapse min-w-[500px]"><thead class="bg-teal-100/50"><tr><th class="p-3 border-b-2 border-teal-200 w-12 text-center">STT</th><th class="p-3 border-b-2 border-teal-200">Phát biểu</th><th class="p-3 border-b-2 border-teal-200 w-24 text-center">Đúng</th><th class="p-3 border-b-2 border-teal-200 w-24 text-center">Sai</th><th class="w-10"></th></tr></thead><tbody>';
+            
+            data.forEach((item, qIdx) => {
+                html += `
+                    <tr class="bg-white border-b border-gray-100 hover:bg-teal-50/30 transition-colors relative" id="tf-q-${qIdx}">
+                        <td class="p-3 text-center font-bold text-gray-500">${qIdx + 1}</td>
+                        <td class="p-3 text-gray-800">${item.q}</td>
+                        <td class="p-3 text-center">
+                            <input type="radio" name="tf_${qIdx}" value="true" class="w-5 h-5 text-teal-600 focus:ring-teal-500 cursor-pointer" onchange="userState.tf[${qIdx}] = true">
+                        </td>
+                        <td class="p-3 text-center">
+                            <input type="radio" name="tf_${qIdx}" value="false" class="w-5 h-5 text-red-500 focus:ring-red-500 cursor-pointer" onchange="userState.tf[${qIdx}] = false">
+                        </td>
+                        <td class="relative"><i class="fas result-icon !right-2"></i></td>
+                    </tr>
+                `;
+            });
+            return html + '</tbody></table></div>';
+        }
+
+        function buildMatch() {
+            const data = appData.content.match;
+            // Shuffle B column for display
+            let colB = data.map((item, idx) => ({ text: item.b, id: item.id, origIdx: idx }));
+            // Simple deterministic shuffle for consistency or random
+            colB.sort((a, b) => a.text.localeCompare(b.text)); 
+
+            let html = `
+                <p class="text-sm text-orange-700 mb-4 bg-orange-100 p-3 rounded-lg"><i class="fas fa-info-circle"></i> <strong>Hướng dẫn:</strong> Bấm chọn một mục ở Cột A, sau đó bấm vào mục tương ứng ở Cột B để nối. Bấm lại vào mục đã nối để hủy.</p>
+                <div class="grid grid-cols-2 gap-4 md:gap-8 relative" id="match-container">
+                    <!-- Col A -->
+                    <div class="space-y-3">
+                        <h4 class="font-bold text-center text-gray-500 mb-2">CỘT A</h4>
+                        ${data.map((item, idx) => `
+                            <button id="match-a-${idx}" onclick="handleMatchClick('a', ${idx})" class="match-btn w-full bg-white p-3 md:p-4 rounded-xl shadow-sm text-left font-medium text-gray-800 flex justify-between items-center relative">
+                                <span>${item.a}</span>
+                                <span class="badge w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all opacity-0"></span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <!-- Col B -->
+                    <div class="space-y-3">
+                        <h4 class="font-bold text-center text-gray-500 mb-2">CỘT B</h4>
+                        ${colB.map((item, bIdx) => `
+                            <button id="match-b-${bIdx}" data-orig-id="${item.id}" onclick="handleMatchClick('b', ${bIdx})" class="match-btn w-full bg-white p-3 md:p-4 rounded-xl shadow-sm text-left text-gray-700 relative">
+                                <span class="badge absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all opacity-0"></span>
+                                <span class="pl-2">${item.text}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        function handleMatchClick(col, idx) {
+            if(isSubmitted) return;
+            
+            const btn = document.getElementById(`match-${col}-${idx}`);
+            
+            if (col === 'a') {
+                // If clicking an already selected A
+                if (matchState.selectedA === idx) {
+                    btn.classList.remove('selected');
+                    matchState.selectedA = null;
+                } else {
+                    // Deselect previous A
+                    if (matchState.selectedA !== null) {
+                        document.getElementById(`match-a-${matchState.selectedA}`).classList.remove('selected');
+                    }
+                    // Select new A
+                    btn.classList.add('selected');
+                    matchState.selectedA = idx;
+                }
+            } else if (col === 'b') {
+                if (matchState.selectedA !== null) {
+                    // Make connection
+                    const aIdx = matchState.selectedA;
+                    const bIdx = idx;
+                    
+                    // Check if A is already connected, remove old visual
+                    if (matchState.connections[aIdx] !== undefined) {
+                        removeMatchVisual(aIdx, matchState.connections[aIdx]);
+                    }
+                    // Check if B is already connected, remove old A's connection
+                    for (const [key, val] of Object.entries(matchState.connections)) {
+                        if (val === bIdx) {
+                            removeMatchVisual(key, bIdx);
+                            delete matchState.connections[key];
+                        }
+                    }
+
+                    // Save new connection
+                    matchState.connections[aIdx] = bIdx;
+                    userState.match[aIdx] = document.getElementById(`match-b-${bIdx}`).getAttribute('data-orig-id');
+                    
+                    // Apply visual
+                    applyMatchVisual(aIdx, bIdx, (aIdx % 6) + 1); // 6 colors
+
+                    // Deselect A
+                    document.getElementById(`match-a-${aIdx}`).classList.remove('selected');
+                    matchState.selectedA = null;
+                } else {
+                    // If clicking B without selecting A, but B is connected -> remove connection
+                    for (const [key, val] of Object.entries(matchState.connections)) {
+                        if (val === idx) {
+                            removeMatchVisual(key, idx);
+                            delete matchState.connections[key];
+                            delete userState.match[key];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        function applyMatchVisual(aIdx, bIdx, colorId) {
+            const btnA = document.getElementById(`match-a-${aIdx}`);
+            const btnB = document.getElementById(`match-b-${bIdx}`);
+            const cls = `match-color-${colorId}`;
+            
+            [btnA, btnB].forEach(btn => {
+                btn.classList.add('matched', cls);
+                const badge = btn.querySelector('.badge');
+                badge.textContent = aIdx + 1;
+                badge.classList.remove('opacity-0');
+                badge.classList.add(cls);
+            });
+            // Store color class to easily remove later
+            btnA.dataset.matchColor = cls;
+            btnB.dataset.matchColor = cls;
+        }
+
+        function removeMatchVisual(aIdx, bIdx) {
+            const btnA = document.getElementById(`match-a-${aIdx}`);
+            const btnB = document.getElementById(`match-b-${bIdx}`);
+            
+            if(btnA) {
+                btnA.classList.remove('matched', btnA.dataset.matchColor);
+                const badgeA = btnA.querySelector('.badge');
+                if(badgeA) { badgeA.classList.add('opacity-0'); badgeA.className = badgeA.className.replace(/match-color-\d/g, ''); }
+                delete btnA.dataset.matchColor;
+            }
+            if(btnB) {
+                btnB.classList.remove('matched', btnB.dataset.matchColor);
+                const badgeB = btnB.querySelector('.badge');
+                if(badgeB) { badgeB.classList.add('opacity-0'); badgeB.className = badgeB.className.replace(/match-color-\d/g, ''); }
+                delete btnB.dataset.matchColor;
+            }
+        }
+
+        function buildDnD() {
+            const data = appData.content.dnd;
+            // Shuffle source items
+            let sourceItems = [...data].sort(() => Math.random() - 0.5);
+
+            let html = `
+                <p class="text-sm text-rose-700 mb-4 bg-rose-100 p-3 rounded-lg"><i class="fas fa-hand-pointer"></i> <strong>Hướng dẫn:</strong> Kéo các ô dữ liệu bên dưới thả vào các ô trống tương ứng (hoặc bấm chọn dữ liệu rồi bấm vào ô trống).</p>
+                
+                <!-- Target Zones -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    ${data.map((item, idx) => `
+                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-4 relative" id="dnd-target-container-${idx}">
+                            <div class="font-semibold text-gray-700 w-full md:w-1/2 text-center md:text-left">${item.target}</div>
+                            <div class="drop-zone w-full md:w-1/2 rounded-lg bg-gray-50 flex items-center justify-center p-2 min-h-[3.5rem] relative" 
+                                 data-drop-id="${item.id}"
+                                 onclick="handleDropZoneClick('${item.id}')">
+                                 <span class="text-gray-400 text-sm italic placeholder-text">Thả vào đây...</span>
+                            </div>
+                            <i class="fas result-icon !-right-2"></i>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Source Items -->
+                <div class="bg-gray-100/50 p-4 rounded-xl border border-gray-200">
+                    <h4 class="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider text-center">Dữ liệu</h4>
+                    <div class="flex flex-wrap justify-center gap-3" id="dnd-source-container">
+                        ${sourceItems.map((item) => {
+                            let content = item.sourceImg 
+                                ? `<img src="${item.sourceImg}" class="max-h-16 max-w-full object-contain mx-auto" alt="data">` 
+                                : `<span class="font-medium">${item.sourceText}</span>`;
+                                
+                            return `
+                            <div class="draggable-item bg-white border-2 border-rose-200 text-rose-800 px-4 py-2 rounded-lg shadow-sm cursor-grab inline-flex items-center justify-center min-w-[100px]"
+                                 draggable="true" 
+                                 id="drag-${item.id}"
+                                 data-source-id="${item.id}"
+                                 onclick="handleDragItemClick('drag-${item.id}')">
+                                ${content}
+                            </div>
+                        `}).join('')}
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        // Drag and Drop Event Logic
+        function attachDragAndDropEvents() {
+            const draggables = document.querySelectorAll('.draggable-item');
+            const dropZones = document.querySelectorAll('.drop-zone');
+
+            draggables.forEach(draggable => {
+                draggable.addEventListener('dragstart', () => {
+                    if(isSubmitted) return;
+                    draggable.classList.add('dragging');
+                    dndState.selectedItemId = null; // clear touch selection
+                    clearDragSelections();
+                });
+
+                draggable.addEventListener('dragend', () => {
+                    draggable.classList.remove('dragging');
+                });
+            });
+
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', e => {
+                    if(isSubmitted) return;
+                    e.preventDefault(); // Necessary to allow dropping
+                    zone.classList.add('drag-over');
+                });
+
+                zone.addEventListener('dragleave', () => {
+                    zone.classList.remove('drag-over');
+                });
+
+                zone.addEventListener('drop', e => {
+                    if(isSubmitted) return;
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    const draggable = document.querySelector('.dragging');
+                    if (draggable) {
+                        appendItemToZone(draggable, zone);
+                    }
+                });
+            });
+        }
+
+        // Touch / Click fallback for DnD
+        function handleDragItemClick(elementId) {
+            if(isSubmitted) return;
+            const el = document.getElementById(elementId);
+            
+            // If already in a drop zone, move it back to source container
+            if (el.parentElement.classList.contains('drop-zone')) {
+                document.getElementById('dnd-source-container').appendChild(el);
+                updateDnDState();
+                checkZonePlaceholders();
+                return;
+            }
+
+            // Select for drop
+            if (dndState.selectedItemId === elementId) {
+                // Deselect
+                el.classList.remove('selected-for-drop');
+                dndState.selectedItemId = null;
+            } else {
+                clearDragSelections();
+                el.classList.add('selected-for-drop');
+                dndState.selectedItemId = elementId;
+            }
+        }
+
+        function handleDropZoneClick(zoneId) {
+            if(isSubmitted) return;
+            if (dndState.selectedItemId) {
+                const draggable = document.getElementById(dndState.selectedItemId);
+                const zone = document.querySelector(`.drop-zone[data-drop-id="${zoneId}"]`);
+                if(draggable && zone) {
+                    appendItemToZone(draggable, zone);
+                    clearDragSelections();
+                }
+            }
+        }
+
+        function clearDragSelections() {
+            document.querySelectorAll('.draggable-item.selected-for-drop').forEach(el => el.classList.remove('selected-for-drop'));
+            dndState.selectedItemId = null;
+        }
+
+        function appendItemToZone(item, zone) {
+            // If zone already has an item, move it back to source
+            const existingItem = zone.querySelector('.draggable-item');
+            if (existingItem && existingItem !== item) {
+                document.getElementById('dnd-source-container').appendChild(existingItem);
+            }
+            
+            // Append new item
+            zone.appendChild(item);
+            item.classList.remove('selected-for-drop');
+            item.classList.remove('dragging');
+            
+            checkZonePlaceholders();
+            updateDnDState();
+        }
+
+        function checkZonePlaceholders() {
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const placeholder = zone.querySelector('.placeholder-text');
+                const hasItem = zone.querySelector('.draggable-item');
+                if (placeholder) {
+                    placeholder.style.display = hasItem ? 'none' : 'block';
+                }
+                if (hasItem) {
+                    zone.classList.add('has-item');
+                    zone.classList.remove('border-dashed', 'border-gray-300');
+                } else {
+                    zone.classList.remove('has-item');
+                }
+            });
+        }
+
+        function updateDnDState() {
+            userState.dnd = {};
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const dropId = zone.getAttribute('data-drop-id');
+                const item = zone.querySelector('.draggable-item');
+                if (item) {
+                    const sourceId = item.getAttribute('data-source-id');
+                    userState.dnd[dropId] = sourceId;
+                }
+            });
+        }
+
+        // --- 3. GRADING LOGIC ---
+        async function gradeWorksheet() {
+            if(isSubmitted) return; // Prevent double submission
+            
+            const name = document.getElementById('student-name').value.trim();
+            const className = document.getElementById('student-class').value.trim();
+            
+            if(!name || !className) {
+                alert("Vui lòng nhập đầy đủ Họ tên và Lớp trước khi nộp bài!");
+                if(!name) document.getElementById('student-name').focus();
+                else document.getElementById('student-class').focus();
+                return;
+            }
+
+            isSubmitted = true;
+            const submitBtn = document.getElementById('btn-submit');
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ĐANG XỬ LÝ...';
+
+            let totalAchieved = 0;
+            let totalConfiguredScore = 0;
+            
+            // Theo dõi thống kê
+            let totalQs = 0;
+            let correctQs = 0;
+            let unansweredQs = 0;
+
+            // Grade MC
+            if (appData.config.sections.mc.active) {
+                let correctCount = 0;
+                let activeCount = appData.config.sections.mc.qCount;
+                totalConfiguredScore += appData.config.sections.mc.points;
+
+                for (let i = 0; i < activeCount; i++) {
+                    const container = document.getElementById(`mc-q-${i}`);
+                    if(!container) continue;
+                    totalQs++;
+                    const ans = userState.mc[i];
+                    const correctAns = appData.content.mc[i].ans;
+                    
+                    if (ans === undefined) {
+                        unansweredQs++;
+                        container.classList.add('wrong-ans', 'border-warning', 'bg-yellow-50');
+                        const correctLabel = container.querySelectorAll('label')[correctAns].querySelector('div');
+                        correctLabel.classList.add('border-success', 'bg-emerald-100');
+                    } else if (ans == correctAns) {
+                        correctCount++;
+                        correctQs++;
+                        container.classList.add('correct-ans', 'border-success', 'bg-emerald-50');
+                    } else {
+                        container.classList.add('wrong-ans', 'border-danger', 'bg-red-50');
+                        const correctLabel = container.querySelectorAll('label')[correctAns].querySelector('div');
+                        correctLabel.classList.add('border-success', 'bg-emerald-100');
+                    }
+                    container.querySelectorAll('input').forEach(input => input.disabled = true);
+                }
+                totalAchieved += (correctCount / activeCount) * appData.config.sections.mc.points;
+            }
+
+            // Grade Fill
+            if (appData.config.sections.fill.active) {
+                let correctCount = 0;
+                let activeCount = appData.config.sections.fill.qCount;
+                totalConfiguredScore += appData.config.sections.fill.points;
+
+                for (let i = 0; i < activeCount; i++) {
+                    const container = document.getElementById(`fill-q-${i}`);
+                    if(!container) continue;
+                    totalQs++;
+                    const ans = userState.fill[i];
+                    const correctAns = appData.content.fill[i].ans;
+                    const selectEl = container.querySelector('select');
+                    
+                    if (!ans || ans === "") {
+                        unansweredQs++;
+                        container.classList.add('wrong-ans', 'border-warning', 'bg-yellow-50');
+                        selectEl.classList.add('text-warning', 'border-warning');
+                        const correctSpan = document.createElement('span');
+                        correctSpan.className = 'text-success font-bold ml-2 text-sm';
+                        correctSpan.innerText = `(Đáp án: ${correctAns})`;
+                        selectEl.parentNode.insertBefore(correctSpan, selectEl.nextSibling);
+                    } else if (ans === correctAns) {
+                        correctCount++;
+                        correctQs++;
+                        container.classList.add('correct-ans', 'border-success', 'bg-emerald-50');
+                        selectEl.classList.add('text-success', 'border-success', 'bg-emerald-100');
+                    } else {
+                        container.classList.add('wrong-ans', 'border-danger', 'bg-red-50');
+                        selectEl.classList.add('text-danger', 'border-danger');
+                        const correctSpan = document.createElement('span');
+                        correctSpan.className = 'text-success font-bold ml-2 text-sm';
+                        correctSpan.innerText = `(Đáp án: ${correctAns})`;
+                        selectEl.parentNode.insertBefore(correctSpan, selectEl.nextSibling);
+                    }
+                    selectEl.disabled = true;
+                }
+                totalAchieved += (correctCount / activeCount) * appData.config.sections.fill.points;
+            }
+
+            // Grade TF
+            if (appData.config.sections.tf.active) {
+                let correctCount = 0;
+                let activeCount = appData.config.sections.tf.qCount;
+                totalConfiguredScore += appData.config.sections.tf.points;
+
+                for (let i = 0; i < activeCount; i++) {
+                    const row = document.getElementById(`tf-q-${i}`);
+                    if(!row) continue;
+                    totalQs++;
+                    const ans = userState.tf[i];
+                    const correctAns = appData.content.tf[i].ans;
+                    
+                    if (ans === undefined) {
+                        unansweredQs++;
+                        row.classList.add('wrong-ans', 'bg-yellow-50');
+                        const cellIdx = correctAns ? 2 : 3;
+                        row.cells[cellIdx].classList.add('bg-emerald-100', 'rounded-lg');
+                    } else if (ans === correctAns) {
+                        correctCount++;
+                        correctQs++;
+                        row.classList.add('correct-ans', 'bg-emerald-50');
+                    } else {
+                        row.classList.add('wrong-ans', 'bg-red-50');
+                        const cellIdx = correctAns ? 2 : 3;
+                        row.cells[cellIdx].classList.add('bg-emerald-100', 'rounded-lg');
+                    }
+                    row.querySelectorAll('input').forEach(input => input.disabled = true);
+                }
+                totalAchieved += (correctCount / activeCount) * appData.config.sections.tf.points;
+            }
+
+            // Grade Match
+            if (appData.config.sections.match.active) {
+                let correctCount = 0;
+                let activeCount = appData.config.sections.match.qCount;
+                totalConfiguredScore += appData.config.sections.match.points;
+
+                for (let i = 0; i < activeCount; i++) {
+                    totalQs++;
+                    const bId_user = userState.match[i];
+                    const correct_bId = appData.content.match[i].id;
+                    const btnA = document.getElementById(`match-a-${i}`);
+                    
+                    if (bId_user === undefined) {
+                        unansweredQs++;
+                        if(btnA) {
+                            btnA.classList.add('bg-yellow-100', 'border-warning', 'text-warning');
+                        }
+                    } else if (bId_user == correct_bId) {
+                        correctCount++;
+                        correctQs++;
+                        if(btnA) {
+                            btnA.classList.remove(btnA.dataset.matchColor);
+                            btnA.classList.add('bg-emerald-100', 'border-success', 'text-success');
+                            const connectedBIdx = matchState.connections[i];
+                            if(connectedBIdx !== undefined) {
+                                const btnB = document.getElementById(`match-b-${connectedBIdx}`);
+                                btnB.classList.remove(btnB.dataset.matchColor);
+                                btnB.classList.add('bg-emerald-100', 'border-success', 'text-success');
+                            }
+                        }
+                    } else {
+                        if(btnA) {
+                             if(btnA.dataset.matchColor) btnA.classList.remove(btnA.dataset.matchColor);
+                             btnA.classList.add('bg-red-100', 'border-danger', 'text-danger');
+                             const connectedBIdx = matchState.connections[i];
+                             if(connectedBIdx !== undefined) {
+                                const btnB = document.getElementById(`match-b-${connectedBIdx}`);
+                                btnB.classList.remove(btnB.dataset.matchColor);
+                                btnB.classList.add('bg-red-100', 'border-danger', 'text-danger');
+                            }
+                        }
+                    }
+                }
+                document.querySelectorAll('.match-btn').forEach(btn => btn.classList.add('pointer-events-none', 'opacity-80'));
+                totalAchieved += (correctCount / activeCount) * appData.config.sections.match.points;
+            }
+
+            // Grade DnD
+            if (appData.config.sections.dnd.active) {
+                let correctCount = 0;
+                let activeCount = appData.config.sections.dnd.qCount;
+                totalConfiguredScore += appData.config.sections.dnd.points;
+
+                for (let i = 0; i < activeCount; i++) {
+                    const targetData = appData.content.dnd[i];
+                    const targetId = targetData.id;
+                    const container = document.getElementById(`dnd-target-container-${i}`);
+                    const userSourceId = userState.dnd[targetId];
+                    totalQs++;
+                    
+                    if (userSourceId === undefined) {
+                        unansweredQs++;
+                        container.classList.add('wrong-ans', 'border-warning', 'bg-yellow-50');
+                        const correctItem = appData.content.dnd.find(x => x.id === targetId);
+                        if(correctItem) {
+                            const p = document.createElement('div');
+                            p.className = 'text-xs text-success mt-2 absolute bottom-1 right-2 bg-white px-2 rounded shadow-sm border border-success';
+                            p.innerHTML = `Đúng: ${correctItem.sourceText}`;
+                            container.appendChild(p);
+                        }
+                    } else if (userSourceId === targetId) { 
+                        correctCount++;
+                        correctQs++;
+                        container.classList.add('correct-ans', 'border-success', 'bg-emerald-50');
+                    } else {
+                        container.classList.add('wrong-ans', 'border-danger', 'bg-red-50');
+                        const correctItem = appData.content.dnd.find(x => x.id === targetId);
+                        if(correctItem) {
+                            const p = document.createElement('div');
+                            p.className = 'text-xs text-success mt-2 absolute bottom-1 right-2 bg-white px-2 rounded shadow-sm border border-success';
+                            p.innerHTML = `Đúng: ${correctItem.sourceText}`;
+                            container.appendChild(p);
+                        }
+                    }
+                }
+                document.querySelectorAll('.draggable-item').forEach(el => el.draggable = false);
+                totalAchieved += (correctCount / activeCount) * appData.config.sections.dnd.points;
+            }
+
+            // Hiển thị Điểm
+            const finalScoreFormatted = (Math.round(totalAchieved * 100) / 100).toString().replace('.', ',');
+            const maxScoreFormatted = totalConfiguredScore.toString().replace('.', ',');
+            const incorrectQs = totalQs - correctQs - unansweredQs;
+
+            document.getElementById('final-score').textContent = finalScoreFormatted;
+            document.getElementById('max-score-display').textContent = maxScoreFormatted;
+            
+            let feedback = "Tuyệt vời! Cố gắng phát huy nhé.";
+            if (totalAchieved < totalConfiguredScore * 0.5) feedback = "Cần cố gắng ôn tập thêm nhé!";
+            else if (totalAchieved < totalConfiguredScore * 0.8) feedback = "Làm khá tốt! Chú ý các câu sai nhé.";
+            document.getElementById('feedback-msg').textContent = feedback;
+
+            document.getElementById('result-display').classList.remove('hidden');
+            document.getElementById('summary-card').classList.remove('hidden');
+            document.getElementById('result-display').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Gửi dữ liệu về Google Sheets
+            if(typeof GOOGLE_SCRIPT_URL !== 'undefined' && GOOGLE_SCRIPT_URL.startsWith("http")) {
+                const payload = {
+                    name: name,
+                    className: className,
+                    score: finalScoreFormatted,
+                    correct: correctQs,
+                    incorrect: incorrectQs,
+                    unanswered: unansweredQs,
+                    total: totalQs
+                };
+
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // Bỏ chặn lỗi CORS policy
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    submitBtn.innerHTML = '<i class="fas fa-check"></i> ĐÃ NỘP BÀI VÀ LƯU KẾT QUẢ';
+                    submitBtn.classList.add('bg-success', 'border-success');
+                } catch (err) {
+                    console.error("Lỗi khi gửi kết quả về Google Sheets:", err);
+                    submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ĐÃ CHẤM (CHƯA LƯU ĐƯỢC KẾT QUẢ)';
+                }
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-check"></i> ĐÃ CHẤM ĐIỂM (CHƯA LIÊN KẾT SHEET)';
+            }
+        }
+
+
+        // --- 4. ADMIN PANEL ---
+        const ADMIN_PWD = "1230";
+
+        function openAdminLogin() {
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('admin-login-error').classList.add('hidden');
+            document.getElementById('admin-password').focus();
+        }
+
+        function closeAdminLogin() {
+            document.getElementById('admin-login-modal').classList.add('hidden');
+        }
+
+        function verifyAdminPassword() {
+            const pwd = document.getElementById('admin-password').value;
+            if (pwd === ADMIN_PWD) {
+                closeAdminLogin();
+                openAdminDashboard();
+            } else {
+                document.getElementById('admin-login-error').classList.remove('hidden');
+            }
+        }
+
+        // Handle Enter key in password field
+        document.getElementById('admin-password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyAdminPassword();
+        });
+
+        function openAdminDashboard() {
+            document.getElementById('admin-dashboard').classList.remove('hidden');
+            populateAdminDashboard();
+        }
+
+        function closeAdminDashboard() {
+            document.getElementById('admin-dashboard').classList.add('hidden');
+        }
+
+        function populateAdminDashboard() {
+            // General
+            document.getElementById('cfg-title').value = appData.config.title;
+            document.getElementById('cfg-subject').value = appData.config.subject;
+            document.getElementById('cfg-grade').value = appData.config.grade;
+            document.getElementById('cfg-total-score').value = appData.config.totalScore;
+
+            // Sections
+            const listEl = document.getElementById('admin-sections-list');
+            listEl.innerHTML = '';
+            
+            Object.values(appData.config.sections).forEach(sec => {
+                const color = colorMap[sec.color].text;
+                const html = `
+                    <div class="flex items-center justify-between p-3 border rounded-lg bg-gray-50 hover:bg-white transition-colors">
+                        <div class="flex items-center gap-3 w-1/2">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer admin-toggle" data-sec="${sec.id}" ${sec.active ? 'checked' : ''} onchange="validateAdminScores()">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                            <span class="font-bold ${color}">${sec.title}</span>
+                        </div>
+                        <div class="flex items-center gap-4 w-1/2 justify-end">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-gray-500 uppercase">Số câu</label>
+                                <input type="number" min="1" max="10" value="${sec.qCount}" class="w-16 border rounded px-2 py-1 text-center text-sm admin-qcount" data-sec="${sec.id}" onchange="validateAdminScores()" disabled title="Khóa số câu để đảm bảo dữ liệu (Demo)">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-gray-500 uppercase">Điểm</label>
+                                <input type="number" step="0.5" min="0" value="${sec.points}" class="w-16 border rounded px-2 py-1 text-center font-bold text-primary admin-points" data-sec="${sec.id}" onchange="validateAdminScores()">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                listEl.insertAdjacentHTML('beforeend', html);
+            });
+
+            // Media (DnD)
+            const mediaList = document.getElementById('admin-media-list');
+            mediaList.innerHTML = '';
+            appData.content.dnd.forEach((item, idx) => {
+                const html = `
+                    <div class="border rounded-lg p-3 bg-gray-50">
+                        <p class="text-sm font-medium mb-2 truncate" title="${item.sourceText}">${item.sourceText}</p>
+                        <div class="flex items-center gap-2">
+                            <input type="file" accept="image/*" class="text-xs w-full" onchange="handleImageUpload(event, ${idx})">
+                            ${item.sourceImg ? `<button onclick="removeImage(${idx})" class="text-danger text-xs hover:underline whitespace-nowrap"><i class="fas fa-trash"></i> Xóa</button>` : ''}
+                        </div>
+                        ${item.sourceImg ? `<img src="${item.sourceImg}" class="h-10 mt-2 object-contain bg-white border p-1 rounded">` : ''}
+                    </div>
+                `;
+                mediaList.insertAdjacentHTML('beforeend', html);
+            });
+
+            validateAdminScores();
+            
+            // Add listener to total score to revalidate
+            document.getElementById('cfg-total-score').addEventListener('input', validateAdminScores);
+        }
+
+        function validateAdminScores() {
+            let totalAllocated = 0;
+            const pointsInputs = document.querySelectorAll('.admin-points');
+            const toggleInputs = document.querySelectorAll('.admin-toggle');
+            
+            pointsInputs.forEach((input, index) => {
+                if (toggleInputs[index].checked) {
+                    totalAllocated += parseFloat(input.value || 0);
+                }
+            });
+
+            const totalScoreTarget = parseFloat(document.getElementById('cfg-total-score').value || 0);
+            const allocatedSpan = document.getElementById('cfg-allocated-score');
+            
+            allocatedSpan.textContent = totalAllocated;
+            
+            if (Math.abs(totalAllocated - totalScoreTarget) > 0.01) {
+                allocatedSpan.classList.add('text-danger');
+                allocatedSpan.classList.remove('text-success');
+                document.getElementById('score-warning').classList.remove('hidden');
+                return false;
+            } else {
+                allocatedSpan.classList.add('text-success');
+                allocatedSpan.classList.remove('text-danger');
+                document.getElementById('score-warning').classList.add('hidden');
+                return true;
+            }
+        }
+
+        // Image Upload to Base64
+        function handleImageUpload(event, dndIndex) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                appData.content.dnd[dndIndex].sourceImg = base64;
+                populateAdminDashboard(); // Refresh UI
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(dndIndex) {
+            appData.content.dnd[dndIndex].sourceImg = null;
+            populateAdminDashboard();
+        }
+
+        function saveAdminConfig() {
+            if (!validateAdminScores()) {
+                if(!confirm("Tổng điểm phân bổ đang KHÔNG KHỚP với Tổng điểm phiếu. Bạn có chắc chắn muốn lưu?")) {
+                    return;
+                }
+            }
+
+            // Update Config
+            appData.config.title = document.getElementById('cfg-title').value;
+            appData.config.subject = document.getElementById('cfg-subject').value;
+            appData.config.grade = document.getElementById('cfg-grade').value;
+            appData.config.totalScore = parseFloat(document.getElementById('cfg-total-score').value);
+
+            // Update Sections
+            const pointsInputs = document.querySelectorAll('.admin-points');
+            const toggleInputs = document.querySelectorAll('.admin-toggle');
+            const qCountInputs = document.querySelectorAll('.admin-qcount');
+
+            pointsInputs.forEach((input, index) => {
+                const secId = input.getAttribute('data-sec');
+                appData.config.sections[secId].points = parseFloat(input.value);
+                appData.config.sections[secId].active = toggleInputs[index].checked;
+                // appData.config.sections[secId].qCount = parseInt(qCountInputs[index].value); // Keeping fixed for now based on data
+            });
+
+            // Save to LocalStorage to persist
+            try {
+                localStorage.setItem('pht_lienketion_data', JSON.stringify(appData));
+            } catch (e) {
+                console.warn("Could not save to localStorage. It might be disabled or full.");
+            }
+
+            // Reset App State if needed (simple reload or re-init)
+            closeAdminDashboard();
+            
+            // Reset UI state
+            isSubmitted = false;
+            document.getElementById('btn-submit').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-submit').innerHTML = '<i class="fas fa-paper-plane"></i> NỘP BÀI & CHẤM ĐIỂM';
+            document.getElementById('result-display').classList.add('hidden');
+            document.getElementById('summary-card').classList.add('hidden');
+            
+            // Reset state objects
+            userState = { mc: {}, fill: {}, tf: {}, match: {}, dnd: {} };
+            matchState = { selectedA: null, connections: {} };
+            
+            initApp();
+            
+            // Notification
+            const notif = document.createElement('div');
+            notif.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-[100] animate-pop text-sm font-medium';
+            notif.innerHTML = '<i class="fas fa-check-circle text-success mr-2"></i> Đã lưu cấu hình thành công!';
+            document.body.appendChild(notif);
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                notif.style.transition = 'opacity 0.5s';
+                setTimeout(() => notif.remove(), 500);
+            }, 2000);
+        }
+
+        // Initialize App on load
+        window.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
